@@ -10,6 +10,7 @@ const crypto = require("crypto"); // Crypto is used to generate cryptographic ke
 const path = require("path"); // Path is used to resolve the path to the organization's connection profile
 const fs = require("fs/promises"); // File system is used to read the connection profile
 const { TextDecoder } = require("util"); // TextDecoder is used to decode the byte array from the blockchain => we get bytes from the blockchain
+const { v4: uuidv4 } = require("uuid");
 
 // external
 const grpc = require("@grpc/grpc-js"); // gRPC is used for communication between the gateway and the fabric network
@@ -25,7 +26,7 @@ const {
 
 /* ------------------ CONFIG ------------------*/
 const channelName = envOrDefault("CHANNEL_NAME", "mychannel"); // The channel name is used to connect to the fabric network
-const chaincodeName = envOrDefault("CHAINCODE_NAME", "DID"); // The chaincode name is used to interact with the fabric network
+const chaincodeName = envOrDefault("CHAINCODE_NAME", "basic"); // The chaincode name is used to interact with the fabric network
 const mspId = envOrDefault("MSP_ID", "Org1MSP");
 
 // Gateway peer endpoint.
@@ -35,11 +36,13 @@ const peerEndpoint = envOrDefault("PEER_ENDPOINT", "localhost:7051");
 const peerHostAlias = envOrDefault("PEER_HOST_ALIAS", "peer0.org1.example.com");
 
 const utf8Decoder = new TextDecoder();
-const gateway = null;
+let gateway = null;
+let network = null;
+let contract = null;
 
 /* --------------------------------------- GATEWAY  ---------------------------------------*/
 // Initialize the gateway that will be used to connect to the fabric network
-async function startGateway(DID, DIDDocument) {
+async function startGateway() {
   const client = await newGRPCConnection(); // Create a new gRPC connection
 
   gateway = connect({
@@ -65,19 +68,19 @@ async function startGateway(DID, DIDDocument) {
   //! TESTING PURPOSES
   try {
     // Create the network
-    const network = gateway.getNetwork(channelName); // Get the network from the gateway
+    network = gateway.getNetwork(channelName); // Get the network from the gateway
 
     // Retrieve the contract from the network
-    const contract = network.getContract(chaincodeName); // Get the contract from the network
+    contract = network.getContract(chaincodeName); // Get the contract from the network
 
     // Create the DID on the blockchain
-    await createDID(contract, DID, DIDDocument);
+    // const rawBytes = await storeDID(contract);
+    // console.log(JSON.parse(JSON.parse(utf8Decoder.decode(rawBytes)))); // Log the transaction
 
     // Retrieve the DID from the blockchain
-    await getDID(contract, DID);
-  } finally {
-    gateway.close(); // Close the gateway
-    client.close(); // Close the gRPC connection
+    // await getDID(contract, DID);
+  } catch (error) {
+    console.error("Error starting gateway:", error); // Log the error
   }
 }
 
@@ -86,7 +89,7 @@ async function newGRPCConnection() {
   const tlsRootCert = await fs.readFile(tlsCertPath); // Read the TLS certificate
   const tlsCredentials = grpc.credentials.createSsl(tlsRootCert); // Create the TLS credentials
 
-  const client = new grpc.Client(peerEndpoint, tlsCredentials, {
+  return new grpc.Client(peerEndpoint, tlsCredentials, {
     "grpc.ssl_target_name_override": peerHostAlias,
   });
 }
@@ -118,13 +121,26 @@ async function newSigner() {
 
 /* --------------------------------------- INVOKE CONTRACTS  ---------------------------------------*/
 // Create a new DID
-async function createDID(contract, DID, DIDDocument) {
-  await contract.submitTransaction("storeDID", DID, DIDDocument); // Submit the transaction to the contract
-  console.log(`DID ${DID} created successfully!`); // Log the transaction
+async function storeDID(contract) {
+  // Create the DID
+  const DIDProps = {
+    org: "org1",
+    methodID: uuidv4(),
+  };
+
+  const DID = `did:hlf:${DIDProps.org}_${DIDProps.methodID}`;
+
+  const res = await contract.submitTransaction(
+    "storeDID",
+    DID,
+    JSON.stringify(DIDProps)
+  ); // Submit the transaction to the contract
+
+  return res;
 }
 
 // Retrieve a document by DID
-async function getDID(contract, DID) {
+async function getDID(contract) {
   // Get the byte stream from the blockchain
   const resultBytes = await contract.evaluateTransaction("getDIDDocument", DID); // Evaluate the transaction to get the DID document
 
@@ -136,17 +152,28 @@ async function getDID(contract, DID) {
 /* --------------------------------------- TESTING METHODS  ---------------------------------------*/
 //! Only for testing purposes
 function printConfig() {
-  console.log("keyDirectoryPath: ", keyDirectoryPath);
-  console.log("certDirectoryPath: ", certDirectoryPath);
-  console.log("tlsCertPath: ", tlsCertPath);
-  console.log("channelName: ", channelName);
-  console.log("chaincodeName: ", chaincodeName);
-  console.log("mspId: ", mspId);
-  console.log("peerEndpoint: ", peerEndpoint);
-  console.log("peerHostAlias: ", peerHostAlias);
+  console.log("keyDirectoryPath:", keyDirectoryPath);
+  console.log("certDirectoryPath:", certDirectoryPath);
+  console.log("tlsCertPath:", tlsCertPath);
+  console.log("channelName:", channelName);
+  console.log("chaincodeName:", chaincodeName);
+  console.log("mspId:", mspId);
+  console.log("peerEndpoint:", peerEndpoint);
+  console.log("peerHostAlias:", peerHostAlias);
+}
+
+function getGateway() {
+  return gateway;
+}
+
+function getContract() {
+  return contract;
 }
 
 module.exports = {
   printConfig,
   startGateway,
+  getGateway,
+  storeDID,
+  getContract,
 };
