@@ -1,28 +1,33 @@
 /* ------------------- IMPORTS ------------------- */
+// core
 const bodyParser = require("body-parser");
-const cors = require('cors');
+const cors = require("cors");
 
+// routes
+const didRouter = require("./routes/did");
 /* ------------------- CONFIG ------------------- */
 const app = require("express")();
 const port = 3000;
 
 /* ------------------- CORE ------------------- */
-app.use(bodyParser.json());         // to support JSON-encoded bodies
-app.use(bodyParser.urlencoded({     // to support URL-encoded bodies
-  extended: true
-})); 
-app.use(cors())
+// register plugins
+app.use(bodyParser.json()); // to support JSON-encoded bodies
+app.use(
+  bodyParser.urlencoded({
+    // to support URL-encoded bodies
+    extended: true,
+  })
+);
+app.use(cors());
 
 app.get("/", (req, res) => {
-    res.send("Sa va dau la muie!");
-})
+  res.send("Sa va dau la muie!");
+});
 
-app.post("/register", (req, res) => {
-    email = req.body.email;
-    console.log(`The email received is ${email}`)
-    res.status(200).send("Received the data")
-})
+// register routes
+app.use("/did", didRouter);
 
+// start server
 app.listen(port, () => {
-    console.log(`Demo for app with hyperledger fabric listening to port ${port}`)
-})
+  console.log(`Demo for app with hyperledger fabric listening to port ${port}`);
+});
