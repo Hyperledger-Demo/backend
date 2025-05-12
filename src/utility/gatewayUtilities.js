@@ -17,12 +17,13 @@ const cryptoPath = envOrDefault(
     "..", // demo-hyperledger-fabric/demo-backend/src
     "..", // demo-hyperledger-fabric/demo-backend
     "..", // demo-hyperledger-fabric
+    "fabric-samples", // demo-hyperledger-fabric/faric-samples
     "test-network",
     "organizations",
     "peerOrganizations",
     "org1.example.com"
   )
-);
+).trim();
 
 // Path to user private key directory.
 const keyDirectoryPath = envOrDefault(
