@@ -1,7 +1,10 @@
 /* ------------------ IMPORTS ------------------*/
+// core
 const express = require("express");
 const { v4: uuidv4 } = require("uuid");
 
+// gateway
+const { printConfig } = require("../gateway/gateway");
 /* ------------------ CONFIG ------------------*/
 const router = express.Router();
 
@@ -11,6 +14,8 @@ router.post("/create", (req, res, next) => {
     org: "org1",
     methodID: uuidv4(),
   };
+
+  // printConfig(); //! Only for testing purposes
 
   // Store the newly created DID on the blockchain
   // Blockchain will contain: key-value pair of DID and DID document

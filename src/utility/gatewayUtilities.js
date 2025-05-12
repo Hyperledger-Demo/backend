@@ -48,7 +48,7 @@ const tlsCertPath = envOrDefault(
   path.resolve(cryptoPath, "peers", "peer0.org1.example.com", "tls", "ca.crt")
 );
 
-modeule.exports = {
+module.exports = {
   envOrDefault,
   keyDirectoryPath,
   certDirectoryPath,

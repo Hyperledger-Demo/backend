@@ -47,3 +47,19 @@ async function startGateway() {
 
   gateway = connect({});
 }
+
+//! Only for testing purposes
+function printConfig() {
+  console.log("keyDirectoryPath: ", keyDirectoryPath);
+  console.log("certDirectoryPath: ", certDirectoryPath);
+  console.log("tlsCertPath: ", tlsCertPath);
+  console.log("channelName: ", channelName);
+  console.log("chaincodeName: ", chaincodeName);
+  console.log("mspId: ", mspId);
+  console.log("peerEndpoint: ", peerEndpoint);
+  console.log("peerHostAlias: ", peerHostAlias);
+}
+
+module.exports = {
+  printConfig,
+};
