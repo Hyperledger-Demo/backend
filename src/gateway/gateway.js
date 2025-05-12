@@ -1,3 +1,9 @@
+/**
+ * This modele is used to create a gateway to the fabric network.
+ * This module was mostly taken from the hyperledger gabric gateway example in the fabric-samples/asset-transfer-basic/javascript
+ * reportory.
+ */
+
 /* ------------------ IMPORTS ------------------*/
 // core
 const crypto = require("crypto"); // Crypto is used to generate cryptographic keys
@@ -31,6 +37,45 @@ const peerHostAlias = envOrDefault("PEER_HOST_ALIAS", "peer0.org1.example.com");
 const utf8Decoder = new TextDecoder();
 const gateway = null;
 
+/* --------------------------------------- GATEWAY  ---------------------------------------*/
+// Initialize the gateway that will be used to connect to the fabric network
+async function startGateway(DID) {
+  const client = await newGRPCConnection(); // Create a new gRPC connection
+
+  gateway = connect({
+    client,
+    identity: await newIdentity(), // Create a new identity
+    signer: await newSigner(), // Create a new signer
+    hash: hash.sha256,
+    // Default timeouts for different gRPC calls
+    evaluateOptions: () => {
+      return { deadline: Date.now() + 5000 }; // 5 seconds
+    },
+    endorseOptions: () => {
+      return { deadline: Date.now() + 15000 }; // 15 seconds
+    },
+    submitOptions: () => {
+      return { deadline: Date.now() + 5000 }; // 5 seconds
+    },
+    commitStatusOptions: () => {
+      return { deadline: Date.now() + 60000 }; // 1 minute
+    },
+  });
+
+  //! TESTING PURPOSES
+  try {
+    // Create the network
+    const network = gateway.getNetwork(channelName); // Get the network from the gateway
+
+    // Retrieve the contract from the network
+    const contract = network.getContract(chaincodeName); // Get the contract from the network
+
+    // Put the DID on the blockchain
+    // Retrieve the DID from the blockchain
+  } finally {
+  }
+}
+
 // Initialize the client
 async function newGRPCConnection() {
   const tlsRootCert = await fs.readFile(tlsCertPath); // Read the TLS certificate
@@ -41,13 +86,32 @@ async function newGRPCConnection() {
   });
 }
 
-// Initialize the gateway that will be used to connect to the fabric network
-async function startGateway() {
-  const client = await newGRPCConnection(); // Create a new gRPC connection
-
-  gateway = connect({});
+// Create a new identity
+async function newIdentity() {
+  const certPath = await getFirstDirFileName(certDirectoryPath);
+  const credentials = await fs.readFile(certPath);
+  return { mspId, credentials };
 }
 
+// Read the first file in the directory
+async function getFirstDirFileName(dirPath) {
+  const files = await fs.readdir(dirPath);
+  const file = files[0];
+  if (!file) {
+    throw new Error(`No files in directory: ${dirPath}`);
+  }
+  return path.join(dirPath, file);
+}
+
+// Create a new signer
+async function newSigner() {
+  const keyPath = await getFirstDirFileName(keyDirectoryPath);
+  const privateKeyPem = await fs.readFile(keyPath);
+  const privateKey = crypto.createPrivateKey(privateKeyPem);
+  return signers.newPrivateKeySigner(privateKey);
+}
+
+/* --------------------------------------- TESTING METHODS  ---------------------------------------*/
 //! Only for testing purposes
 function printConfig() {
   console.log("keyDirectoryPath: ", keyDirectoryPath);
