@@ -39,7 +39,7 @@ const gateway = null;
 
 /* --------------------------------------- GATEWAY  ---------------------------------------*/
 // Initialize the gateway that will be used to connect to the fabric network
-async function startGateway(DID) {
+async function startGateway(DID, DIDDocument) {
   const client = await newGRPCConnection(); // Create a new gRPC connection
 
   gateway = connect({
@@ -70,9 +70,14 @@ async function startGateway(DID) {
     // Retrieve the contract from the network
     const contract = network.getContract(chaincodeName); // Get the contract from the network
 
-    // Put the DID on the blockchain
+    // Create the DID on the blockchain
+    await createDID(contract, DID, DIDDocument);
+
     // Retrieve the DID from the blockchain
+    await getDID(contract, DID);
   } finally {
+    gateway.close(); // Close the gateway
+    client.close(); // Close the gRPC connection
   }
 }
 
@@ -111,6 +116,23 @@ async function newSigner() {
   return signers.newPrivateKeySigner(privateKey);
 }
 
+/* --------------------------------------- INVOKE CONTRACTS  ---------------------------------------*/
+// Create a new DID
+async function createDID(contract, DID, DIDDocument) {
+  await contract.submitTransaction("storeDID", DID, DIDDocument); // Submit the transaction to the contract
+  console.log(`DID ${DID} created successfully!`); // Log the transaction
+}
+
+// Retrieve a document by DID
+async function getDID(contract, DID) {
+  // Get the byte stream from the blockchain
+  const resultBytes = await contract.evaluateTransaction("getDIDDocument", DID); // Evaluate the transaction to get the DID document
+
+  const resultJSON = utf8Decoder.decode(resultBytes); // Decode the byte stream to a string
+  const result = JSON.parse(resultJSON); // Parse the string to a JSON object
+  console.log(`DID ${DID} retrieved successfully! - the document is ${result}`); // Log the transaction
+}
+
 /* --------------------------------------- TESTING METHODS  ---------------------------------------*/
 //! Only for testing purposes
 function printConfig() {
@@ -126,4 +148,5 @@ function printConfig() {
 
 module.exports = {
   printConfig,
+  startGateway,
 };
