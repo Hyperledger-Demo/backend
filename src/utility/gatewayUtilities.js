@@ -42,8 +42,15 @@ const certDirectoryPath = envOrDefault(
   )
 );
 
+// Path to peer tls certificate.
+const tlsCertPath = envOrDefault(
+  "TLS_CERT_PATH",
+  path.resolve(cryptoPath, "peers", "peer0.org1.example.com", "tls", "ca.crt")
+);
+
 modeule.exports = {
   envOrDefault,
   keyDirectoryPath,
   certDirectoryPath,
+  tlsCertPath,
 };
