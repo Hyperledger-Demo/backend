@@ -36,13 +36,16 @@ const peerEndpoint = envOrDefault("PEER_ENDPOINT", "localhost:7051");
 const peerHostAlias = envOrDefault("PEER_HOST_ALIAS", "peer0.org1.example.com");
 
 const utf8Decoder = new TextDecoder();
+let gateway = null;
+let network = null;
+let contract = null;
 
 /* --------------------------------------- GATEWAY  ---------------------------------------*/
 // Initialize the gateway that will be used to connect to the fabric network
 async function startGateway() {
   const client = await newGRPCConnection(); // Create a new gRPC connection
 
-  const gateway = connect({
+  gateway = connect({
     client,
     identity: await newIdentity(), // Create a new identity
     signer: await newSigner(), // Create a new signer
@@ -65,20 +68,19 @@ async function startGateway() {
   //! TESTING PURPOSES
   try {
     // Create the network
-    const network = gateway.getNetwork(channelName); // Get the network from the gateway
+    network = gateway.getNetwork(channelName); // Get the network from the gateway
 
     // Retrieve the contract from the network
-    const contract = network.getContract(chaincodeName); // Get the contract from the network
+    contract = network.getContract(chaincodeName); // Get the contract from the network
 
     // Create the DID on the blockchain
-    const rawBytes = await storeDID(contract);
-    console.log(JSON.parse(JSON.parse(utf8Decoder.decode(rawBytes)))); // Log the transaction
+    // const rawBytes = await storeDID(contract);
+    // console.log(JSON.parse(JSON.parse(utf8Decoder.decode(rawBytes)))); // Log the transaction
 
     // Retrieve the DID from the blockchain
     // await getDID(contract, DID);
-  } finally {
-    gateway.close(); // Close the gateway
-    client.close(); // Close the gRPC connection
+  } catch (error) {
+    console.error("Error starting gateway:", error); // Log the error
   }
 }
 
@@ -128,12 +130,12 @@ async function storeDID(contract) {
 
   const DID = `did:hlf:${DIDProps.org}_${DIDProps.methodID}`;
 
-  console.log(`Storing DID ${DID}...`); // Log the transaction
   const res = await contract.submitTransaction(
     "storeDID",
     DID,
     JSON.stringify(DIDProps)
   ); // Submit the transaction to the contract
+
   return res;
 }
 
@@ -160,7 +162,18 @@ function printConfig() {
   console.log("peerHostAlias:", peerHostAlias);
 }
 
+function getGateway() {
+  return gateway;
+}
+
+function getContract() {
+  return contract;
+}
+
 module.exports = {
   printConfig,
   startGateway,
+  getGateway,
+  storeDID,
+  getContract,
 };
